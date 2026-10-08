@@ -13,7 +13,7 @@
 {"id":"g10-10","en":"sustainable","ru":"устойчивый, экологичный","topic":"Environment","ex":true}
 ],
 "sentences":[
-{"id":"g10-s01","s":"Never [give up] on your dreams.","ru":"Никогда не отказывайся от своей мечты.","topic":"Phrasal verbs","ex":true},
-{"id":"g10-s02","s":"I'm [looking forward to] the holidays.","ru":"Я с нетерпением жду каникул.","topic":"Phrasal verbs","ex":true},
-{"id":"g10-s03","s":"We should [recycle/reduce/pollute] plastic bottles.","ru":"Нам стоит перерабатывать пластиковые бутылки.","topic":"Environment","ex":true}
+{"id":"g10-s01","s":"Never [give up] on your dreams","ru":"Никогда не отказывайся от своей мечты.","topic":"Phrasal verbs","ex":true},
+{"id":"g10-s02","s":"I'm [looking forward to] the holidays","ru":"Я с нетерпением жду каникул.","topic":"Phrasal verbs","ex":true},
+{"id":"g10-s03","s":"We should [recycle/reduce/pollute] plastic bottles","ru":"Нам стоит перерабатывать пластиковые бутылки.","topic":"Environment","ex":true}
 ]}
