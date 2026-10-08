@@ -310,12 +310,12 @@ function planToday(){
   var fk=new Set(focus.map(function(x){return x.key}));
   function box(x){return p.w[x.id].b}
   var dueW=P.words.filter(function(w){var s=p.w[w.id];return s&&s.due<=t}).sort(function(a,b){return box(a)-box(b)}).slice(0,6);
-  var dueS=P.sents.filter(function(s){var x=p.w[s.id];return x&&x.due<=t}).slice(0,2);
+  var dueS=P.sents.filter(function(s){var x=p.w[s.id];return x&&x.due<=t}).slice(0,6);
   var newW=shuffle(P.words.filter(function(w){return !p.w[w.id]&&fk.has(tkey(w))}));
   if(newW.length<4){var more=P.words.filter(function(w){return !p.w[w.id]&&!fk.has(tkey(w))&&!st[tkey(w)].passed});newW=newW.concat(more.slice(0,6))}
   var newS=shuffle(P.sents.filter(function(s){return !p.w[s.id]&&fk.has(tkey(s))}));
   var words=dueW.concat(newW.slice(0,Math.max(4,10-dueW.length))).slice(0,10);
-  var sents=dueS.concat(newS).slice(0,3);
+  var sents=dueS.concat(newS).slice(0,Math.max(3,10-words.length));
   var items=words.map(function(w){return autoWordItem(w)}).concat(sents.map(function(s){return autoSentItem(s)}).filter(Boolean));
   var nNew=words.filter(function(w){return !p.w[w.id]}).length+sents.filter(function(s){return !p.w[s.id]}).length;
   return {items:shuffle(items),nNew:nNew,nDue:items.length-nNew};

@@ -1,4 +1,6 @@
 {"v":1,"courses":[
 {"id":"school","title":"Школа","file":"words.json","links":["cambridge"],"dict":"essential"},
-{"id":"grade-10","title":"10 класс","file":"words/grade-10.json","links":["cambridge","youglish"],"dict":"full"}
+  {"id":"grade-10","title":"10 класс","file":"words/grade-10.json","links":["cambridge","youglish"],"dict":"full"},
+  {"id":"tenses","title":"Времена · read","file":"words/tenses.json","links":["cambridge","youglish"],"dict":"full"}
 ]}
+
