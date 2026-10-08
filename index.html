@@ -38,7 +38,7 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .ic svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 .wrap{max-width:640px;margin:0 auto;padding-inline:16px}
-.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top{position:relative;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:10px}
 .brand{font-family:var(--f-display);font-weight:700;font-size:1.05rem;letter-spacing:-.01em;display:flex;align-items:center;gap:10px;min-width:0}
 .brand-mark{width:30px;height:30px;border-radius:8px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-size:.8rem;flex:none}
@@ -215,7 +215,7 @@ textarea.field{min-height:150px;resize:vertical;font-family:ui-monospace,SFMono-
 .scroll-x{overflow-x:auto}
 
 /* editor */
-.savebar{position:sticky;top:calc(env(safe-area-inset-top,0px) + 58px);z-index:10;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 14px;border-radius:var(--r);background:var(--surface);border:2px solid var(--line);font-weight:700}
+.savebar{position:sticky;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:10;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 14px;border-radius:var(--r);background:var(--surface);border:2px solid var(--line);font-weight:700}
 .savebar.dirty{border-color:var(--margin)}
 .savebar .st{display:flex;align-items:center;gap:8px;min-width:0}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--good);flex:none}
