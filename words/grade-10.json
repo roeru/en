@@ -1,0 +1,19 @@
+{"v":2,
+"current":["Phrasal verbs","Environment"],
+"words":[
+{"id":"g10-01","en":"give up","ru":"сдаваться, бросать (привычку)","topic":"Phrasal verbs","ex":true},
+{"id":"g10-02","en":"look forward to","ru":"ждать с нетерпением","topic":"Phrasal verbs","ex":true},
+{"id":"g10-03","en":"get on with","ru":"ладить с кем-то","topic":"Phrasal verbs","ex":true},
+{"id":"g10-04","en":"take part in","ru":"участвовать в","topic":"Phrasal verbs","ex":true},
+{"id":"g10-05","en":"find out","ru":"узнать, выяснить","topic":"Phrasal verbs","ex":true},
+{"id":"g10-06","en":"environment","ru":"окружающая среда","topic":"Environment","ex":true},
+{"id":"g10-07","en":"pollution","ru":"загрязнение","topic":"Environment","ex":true},
+{"id":"g10-08","en":"recycle","ru":"перерабатывать","topic":"Environment","ex":true},
+{"id":"g10-09","en":"reduce","ru":"сокращать, уменьшать","topic":"Environment","ex":true},
+{"id":"g10-10","en":"sustainable","ru":"устойчивый, экологичный","topic":"Environment","ex":true}
+],
+"sentences":[
+{"id":"g10-s01","s":"Never [give up] on your dreams.","ru":"Никогда не отказывайся от своей мечты.","topic":"Phrasal verbs","ex":true},
+{"id":"g10-s02","s":"I'm [looking forward to] the holidays.","ru":"Я с нетерпением жду каникул.","topic":"Phrasal verbs","ex":true},
+{"id":"g10-s03","s":"We should [recycle/reduce/pollute] plastic bottles.","ru":"Нам стоит перерабатывать пластиковые бутылки.","topic":"Environment","ex":true}
+]}

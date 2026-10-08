@@ -1,0 +1,43 @@
+# Как добавить: открой сайт через PhpStorm → вкладка «Слова» → курс «Школа».
+# Скопируй ВСЁ ниже линии и вставь в большое поле. Строки с # задают тему.
+# ---------------------------------------------------------------
+# Pronouns · Кто?
+I — я
+you — ты, вы
+he — он
+she — она
+it — оно, он, она (о предмете или животном)
+we — мы
+they — они
+[She/Her/He] is my sister. — Она моя сестра.
+[He/Him/His] has a dog. — У него есть собака.
+[We/Us/Our] like apples. — Мы любим яблоки.
+[They/Them/Their] are my friends. — Они мои друзья.
+[I/Me/My] like ice cream. — Я люблю мороженое.
+[It/Its/He] is a big cat. — Это большая кошка.
+# Pronouns · Кого? Кому?
+me — меня, мне
+you — тебя, тебе, вас, вам
+him — его, ему
+her — её, ей
+it — его, её, ему, ей (о предмете)
+us — нас, нам
+them — их, им
+Look at [me/I/my]! — Посмотри на меня!
+I love [her/she/he]. — Я люблю её.
+Help [us/we/our], please! — Помоги нам, пожалуйста!
+I can see [them/they/their]. — Я вижу их.
+Give [him/he/his] the ball. — Дай ему мяч.
+# Pronouns · Чей?
+my — мой, моя, моё, мои
+your — твой, ваш
+his — его (принадлежит ему)
+her — её (принадлежит ей)
+its — его, её (о предмете или животном)
+our — наш
+their — их
+This is [my/me/I] bag. — Это моя сумка.
+[Her/She/He] name is Anna. — Её зовут Анна.
+[Our/We/Us] house is big. — Наш дом большой.
+[Their/They/Them] dog is funny. — Их собака смешная.
+The cat likes [its/it/his] toy. — Кошка любит свою игрушку.
