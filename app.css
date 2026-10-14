@@ -80,7 +80,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 @media (max-width:420px){.modes{grid-template-columns:1fr}.mode{flex-direction:row;align-items:baseline;gap:10px}.mode b{min-width:84px}}
 
 .seg{display:flex;background:var(--surface-2);border-radius:12px;padding:4px;gap:4px;flex-wrap:wrap}
-.seg button{flex:1 1 0;min-width:64px;border:0;background:transparent;padding:9px 8px;border-radius:9px;font-weight:700;color:var(--muted);white-space:nowrap}
+.seg button{flex:1 1 auto;min-width:64px;border:0;background:transparent;padding:9px 8px;border-radius:9px;font-weight:700;color:var(--muted);white-space:nowrap}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:var(--shadow)}
 .row2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
 @media (max-width:520px){.row2{grid-template-columns:1fr}}
@@ -290,4 +290,46 @@ textarea.field{min-height:150px;resize:vertical;font-family:ui-monospace,SFMono-
     .ptile{min-height:40px;padding:6px 11px;font-size:1rem}
     .session .prompt{padding:20px 16px 18px 40px}
     .session .prompt::before{left:26px}
+}
+/* ---- v3: контекст, пазл с курсором и перетаскиванием, буквы, счёт, пары ---- */
+.ctx-box{display:flex;flex-direction:column;gap:4px;align-items:center;margin-top:6px;padding-top:12px;border-top:1px dashed var(--line);width:100%}
+.ctx{font-weight:700;font-size:clamp(1rem,4.4vw,1.2rem);line-height:1.4;overflow-wrap:anywhere}
+.ctx mark{background:var(--accent-soft);color:var(--fg);border-radius:6px;padding:0 5px}
+.ctx .blank{display:inline-block;min-width:2.6em;border-bottom:3px solid var(--accent);color:var(--accent);text-align:center}
+.ctx .blank.ok,.prompt .blank.ok{color:var(--good);border-color:var(--good)}
+.ctx .blank.no{color:var(--bad);border-color:var(--bad)}
+.face .ctx-box{margin-top:2px}
+
+.acts .wide{grid-column:1 / -1}
+.pans{cursor:text;position:relative}
+.pans:focus-visible{outline-offset:3px}
+.pcaret{display:inline-block;align-self:stretch;width:3px;min-height:36px;margin-inline:-3px;border-radius:2px;background:var(--accent);animation:blink 1s steps(2,start) infinite}
+.pcaret.drop{width:6px;margin-inline:0;animation:none;opacity:.8}
+.pans:not(:focus):not(:focus-within) .pcaret:not(.drop){animation:none;opacity:.45}
+@keyframes blink{to{visibility:hidden}}
+.pend{font-family:var(--f-display);font-weight:700;font-size:1.4rem;color:var(--muted);align-self:flex-end;margin-left:-4px}
+.ptile{touch-action:none;user-select:none;-webkit-user-select:none}
+.pghost{position:fixed;left:0;top:0;z-index:90;pointer-events:none;border-color:var(--accent);box-shadow:var(--shadow);opacity:.95}
+
+.opt.big{font-family:var(--f-display);font-size:clamp(1.6rem,8vw,2.2rem);min-height:76px}
+.letter{font-family:var(--f-display);font-weight:700;font-size:clamp(4rem,22vw,6.5rem);line-height:1}
+.letter.seq{display:flex;gap:.35em;font-size:clamp(2.6rem,14vw,4rem)}
+.letter.seq .q{color:var(--accent)}
+.letter.seq .ok{color:var(--good)}
+.pic{font-size:clamp(3rem,16vw,4.5rem);line-height:1}
+.prompt .blank{display:inline-block;min-width:.8em;border-bottom:3px solid var(--accent);color:var(--accent);text-align:center}
+.count-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 10px;max-width:340px;font-size:clamp(1.7rem,8vw,2.3rem);line-height:1.15}
+.prompt.slim{padding-block:16px}
+
+.pairs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pcol{display:flex;flex-direction:column;gap:10px;min-width:0}
+.pbtn{min-height:58px;border-radius:var(--r);border:2px solid var(--line);background:var(--surface);font-weight:800;font-size:1.05rem;padding:8px 10px;overflow-wrap:anywhere;transition:border-color .15s,background .15s}
+.pbtn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.pbtn.ok{border-color:var(--good);background:var(--good-soft);color:var(--good);cursor:default}
+.pbtn.no{border-color:var(--bad);background:var(--bad-soft);color:var(--bad);animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@media (max-width:480px){
+    .pairs,.pcol{gap:8px}
+    .pbtn{min-height:52px;font-size:.98rem;padding:6px 8px}
+    .acts .btn{min-height:52px}
 }
