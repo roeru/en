@@ -41,8 +41,13 @@
     function norm(s){return String(s).toLowerCase().replace(/ё/g,'е').replace(/[’‘`´]/g,"'").replace(/[.!?()"«»,]/g,'').replace(/\s+/g,' ').trim()}
     function variants(s){var v=[norm(s)];String(s).split(/[,;\/]/).forEach(function(x){x=norm(x);if(x)v.push(x)});
         v.slice().forEach(function(x){if(x.indexOf('to ')===0)v.push(x.slice(3))});return v}
-    function matches(input,correct){var a=norm(input);if(!a)return false;var v=variants(String(correct).replace(/\([^)]*\)/g,''));
+    // тире и точки-разделители не важны: «go went gone» = «go – went – gone»
+    function dashless(s){return String(s).replace(/\s*[–—·\/]\s*/g,' ').replace(/\s+/g,' ').trim()}
+    function matches(input,correct){var a=dashless(norm(input));if(!a)return false;var v=variants(String(correct).replace(/\([^)]*\)/g,'')).map(dashless);
         return v.indexOf(a)>=0||v.indexOf(a.indexOf('to ')===0?a.slice(3):a)>=0}
+    /* «Ничего не нужно» (нулевой артикль): в [скобках] пишется как — или - или ∅ или 0. */
+    function isZero(x){return /^\s*(—|–|-|∅|0)\s*$/.test(String(x))}
+    function zeroLabel(o){return isZero(o)?'— (ничего)':o}
     function cap1(x){x=String(x);return x.charAt(0).toUpperCase()+x.slice(1)}
     function escRe(x){return String(x).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
 
@@ -85,6 +90,7 @@
     function normCourse(c,i){var o={id:String(c.id||('course'+i)),title:String(c.title||c.id||'Курс'),file:String(c.file||'words.json'),
         links:Array.isArray(c.links)?c.links:['cambridge'],dict:c.dict==='full'?'full':'essential'};
         if(c.level==='kids')o.level='kids';  // «для самых маленьких»: без диктанта, короткие пазлы, картинки
+        if(c.accent==='us'||c.accent==='uk')o.accent=c.accent;  // произношение курса важнее настройки профиля
         return o}
     function courseJson(d){
         return '{"v":2,\n"current":'+JSON.stringify(d.current||[])+',\n"words":[\n'+(d.words||[]).map(function(w){return JSON.stringify(w)}).join(',\n')+
@@ -174,7 +180,8 @@
         var m=/\[([^\]]+)\]/.exec(s.s||'');
         var parts=m?m[1].split('/').map(function(x){return x.trim()}).filter(Boolean):[];
         var answer=parts[0]||'';
-        var full=String(s.s||'').replace(/\[([^\]]+)\]/,function(a,b){return b.split('/')[0].trim()}).replace(/\s+/g,' ').trim();
+        var full=String(s.s||'').replace(/\[([^\]]+)\]/,function(a,b){var x=b.split('/')[0].trim();return isZero(x)?'':x}).replace(/\s+/g,' ').trim();
+        if(m&&m.index===0&&isZero(answer))full=cap1(full);
         var pre=m?String(s.s).slice(0,m.index):'',post=m?String(s.s).slice(m.index+m[0].length):'';
         return {hasGap:!!m,answer:answer,opts:parts.length>1?parts:null,full:full,pre:pre,post:post};
     }
@@ -240,8 +247,9 @@
     if(canSpeak&&window.speechSynthesis.addEventListener)window.speechSynthesis.addEventListener('voiceschanged',function(){voiceCache={}});
     function tts(text,acc){if(!canSpeak)return;try{window.speechSynthesis.cancel();var lang=acc==='us'?'en-US':'en-GB';
         var u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=.85;var v=pickVoice(lang);if(v)u.voice=v;window.speechSynthesis.speak(u)}catch(e){}}
+    var itemAcc=null;  // акцент курса текущего задания (если задан в courses.json)
     function speak(text,ttsOnly){
-        var acc=accentOf(curProfile()),k=!ttsOnly&&audioKey(text),a=k&&audioCache[k];
+        var acc=itemAcc||accentOf(curProfile()),k=!ttsOnly&&audioKey(text),a=k&&audioCache[k];
         if(a&&typeof a==='object'){var url=a[acc]||a.uk||a.us||a.any;
             try{var au=new Audio(url);au.play().catch(function(){tts(text,acc)});return}catch(e){}}
         tts(text,acc);
@@ -251,7 +259,7 @@
         return (canSpeak||(!ttsOnly&&audioKey(text)))?h('button',{class:'iconbtn','aria-label':'Послушать',onclick:function(e){e.stopPropagation();speak(text,ttsOnly)}},icon('sound')):null}
     function cleanWord(t){var x=String(t).replace(/\([^)]*\)/g,'').trim();if(/^to\s/i.test(x))x=x.slice(3);return x.trim()}
     function dictLinks(w){
-        var c=courseById(w._c),links=c?c.links:['cambridge'],acc=accentOf(curProfile()),x=cleanWord(w.en),out=[];
+        var c=courseById(w._c),links=c?c.links:['cambridge'],acc=(c&&c.accent)||accentOf(curProfile()),x=cleanWord(w.en),out=[];
         if(!x)return null;
         if(links.indexOf('cambridge')>=0){
             var book=c&&c.dict==='full'?'english':(acc==='us'?'essential-american-english':'essential-british-english');
@@ -262,6 +270,8 @@
             out.push(h('a',{class:'dlink',href:'https://youglish.com/pronounce/'+encodeURIComponent(x)+'/english/'+acc,target:'_blank',rel:'noopener'},'YouGlish',icon('ext')));
         return out.length?h('div',{class:'dlinks'},out):null;
     }
+    /* Как звучит — русскими буквами, ударный слог БОЛЬШИМИ: "say":"айл би райт БЭК" */
+    function sayEl(x){return x&&x.say?h('span',{class:'say'},h('span',{class:'say-k'},'звучит'),x.say):null}
 
     /* ================= ui state ================= */
     var pref=store.prefs;
@@ -544,7 +554,7 @@
         ui.session={items:items,i:0,results:[],state:'q'};
         document.body.classList.add('lock');render();
     }
-    function endSession(){ui.session=null;document.body.classList.remove('lock');render()}
+    function endSession(){ui.session=null;itemAcc=null;document.body.classList.remove('lock');render()}
     function renderSessionShell(){
         return h('div',{class:'session',role:'dialog','aria-label':'Тренировка'},
             h('div',{class:'s-top'},
@@ -571,7 +581,7 @@
         $('#scount').textContent=Math.min(s.i+1,total)+' / '+total;
         body.replaceChildren();body.scrollTop=0;
         if(s.i>=total){$('#scount').textContent=total+' / '+total;body.append(renderSummary());return}
-        var it=s.items[s.i],x=it.x;
+        var it=s.items[s.i],x=it.x,xc=courseById(x._c);itemAcc=(xc&&xc.accent)||null;
         // буквы понимают только свои упражнения
         if(it.k==='w'&&kindOf(x)==='letter'&&it.mode!=='abc'){it.mode='abc';it.dir='low'}
         if(it.k==='w'&&kindOf(x)!=='letter'&&it.mode==='abc'){it.mode='test';it.dir='en'}
@@ -586,6 +596,7 @@
             },
             reveal:function(){ // after answer: pronunciation + dictionary links
                 if(it.k==='w'&&kindOf(x)==='letter'){ctx.setSpeak(x.en,true);return}
+                var sy=(it.mode==='cards'||it.mode==='pairs')?null:sayEl(x);if(sy)after.append(sy);
                 if(it.k==='w'){ctx.setSpeak(x.en);var dl=dictLinks(x);if(dl)after.append(dl)}
                 else ctx.setSpeak(parseSent(x).full);
             },
@@ -602,7 +613,7 @@
         var card=h('button',{class:'card',id:'card','aria-label':'Карточка: '+front+'. Нажми, чтобы перевернуть',onclick:flip},
             h('div',{class:'inner'},
                 h('div',{class:'face front'},h('span',{class:'lang'},dir==='en'?'English':'Русский'),h('span',{class:'word'},front),h('span',{class:'tap'},'Нажми, чтобы перевернуть')),
-                h('div',{class:'face back'},h('span',{class:'lang'},dir==='en'?'Русский':'English'),h('span',{class:'word'},back),h('span',{class:'sub'},front),
+                h('div',{class:'face back'},h('span',{class:'lang'},dir==='en'?'Русский':'English'),h('span',{class:'word'},back),h('span',{class:'sub'},front),sayEl(w),
                     c?h('span',{class:'ctx-box'},ctxEl(c,false),c.ru?h('span',{class:'sub'},c.ru):null):null)));
         var acts=h('div',{class:'acts one',id:'acts'},h('button',{class:'btn primary',onclick:flip},'Показать перевод'));
         ctx.body.append(card,acts,ctx.after);
@@ -684,11 +695,15 @@
                     if(s.state!=='q')return;var ok=norm(o)===norm(ps.answer);
                     Array.prototype.forEach.call(box.children,function(b,j){b.disabled=true;if(norm(opts[j])===norm(ps.answer))b.classList.add('ok')});
                     if(!ok)this.classList.add('no');finish(ok,null);
-                }},o))});
+                }},zeroLabel(o)))});
             ctx.body.append(box,res,next,ctx.after);
         }else{
-            var inp=h('input',{id:'gap-in',class:'field write-field',autocomplete:'off',autocapitalize:'off',autocorrect:'off',spellcheck:'false',enterkeyhint:'done','aria-label':'Слово'});
-            var go=function(){if(s.state!=='q'){ctx.next();return}if(!norm(inp.value)){inp.focus();return}inp.readOnly=true;finish(norm(inp.value)===norm(ps.answer),inp.value)};
+            var zeroOk=isZero(ps.answer)||(ps.opts||[]).some(isZero);
+            var inp=h('input',{id:'gap-in',class:'field write-field',autocomplete:'off',autocapitalize:'off',autocorrect:'off',spellcheck:'false',enterkeyhint:'done','aria-label':'Слово',
+                placeholder:zeroOk?'если ничего не нужно — поставь -':''});
+            var isNone=function(v){return isZero(v)||/^\s*(ничего|нет)\s*$/i.test(v)};
+            var go=function(){if(s.state!=='q'){ctx.next();return}var v=inp.value;if(!norm(v)&&!isNone(v)){inp.focus();return}inp.readOnly=true;
+                finish(isZero(ps.answer)?isNone(v):norm(v)===norm(ps.answer),v)};
             inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();go()}});
             next.append(h('button',{class:'btn primary',onclick:go},'Проверить'));
             // результат — сразу под полем ввода, кнопка — ниже
@@ -704,23 +719,53 @@
         'is are am was were be do does did have has had can could will would shall should must may let look give help please '+
         'never always what where when who whose why how which not no yes and but or so if then to of in on at for with from by '+
         "don't doesn't didn't isn't aren't wasn't weren't can't won't haven't hasn't it's i'm you're he's she's we're they're").split(' ');
-    function lowerOk(tok,pool){
+    /* Можно ли написать слово с маленькой буквы. Да — если оно где-то в словарях встречается маленьким
+       (Take → take из «take off»). Имена (London, Tom) маленькими нигде не пишутся — остаются с большой. */
+    var lowerSet=null;
+    function lowerWords(){
+        if(lowerSet)return lowerSet;lowerSet={};
+        COURSES.forEach(function(c){var d=DATA[c.id];if(!d)return;
+            d.words.forEach(function(w){String(w.en||'').split(/[\s–—·\/,]+/).forEach(function(t){if(/^[a-z]/.test(t))lowerSet[t.replace(/[^a-z']/g,'')]=1})});
+            d.sentences.forEach(function(s){flat(s.s).split(/\s+/).forEach(function(t,i){if(i>0&&/^[a-z]/.test(t))lowerSet[t.replace(/[^a-z']/g,'')]=1})})});
+        return lowerSet;
+    }
+    function lowerOk(tok){
         if(tok==='I'||/^I'/.test(tok))return false;
         var l=tok.toLowerCase().replace(/[^a-z']/g,'');
-        if(COMMON.indexOf(l)>=0)return true;
-        return pool.some(function(w){return norm(w.en)===l});
+        return COMMON.indexOf(l)>=0||!!lowerWords()[l];
+    }
+    /* Лишние слова-ловушки для пазла: без них «Take off your shoes» собирается без раздумий.
+       1) неверные варианты из [скобок] — самые полезные (a/the, went/goed);
+       2) грамматические пары (is/are, he/him…) — почти всегда дают неверное предложение;
+       3) слова из других предложений этой темы. */
+    var CONFUSE={is:'are',are:'is',am:'is',was:'were',were:'was',do:'does',does:'do',has:'have',have:'has',
+        he:'him',him:'he',she:'her',they:'them',them:'they',we:'us',us:'we',this:'these',these:'this',that:'those',those:'that',much:'many',many:'much',
+        "don't":"doesn't","doesn't":"don't","isn't":"aren't","aren't":"isn't","wasn't":"weren't","weren't":"wasn't"};
+    function puzzleExtras(x,ps,tokens){
+        var want=isKids(x)?(tokens.length<=3?1:2):3,out=[],have={};
+        tokens.forEach(function(t){have[t.toLowerCase().replace(/[^a-z']/g,'')]=1});
+        function put(t){t=String(t).replace(/[.!?,;:"«»]+$/,'').trim();var k=t.toLowerCase().replace(/[^a-z']/g,'');
+            if(!k||have[k]||out.length>=want)return;have[k]=1;out.push(lowerOk(t)?t.charAt(0).toLowerCase()+t.slice(1):t)}
+        shuffle((ps.opts||[]).slice(1)).forEach(function(o){if(!isZero(o))o.split(/\s+/).forEach(put)});
+        shuffle(tokens.slice()).forEach(function(t){var c=CONFUSE[t.toLowerCase()];if(c)put(c)});
+        var b=baseOf(x),same=P.sents.filter(function(o){return o!==b&&o._c===b._c&&topicOf(o)===topicOf(b)});
+        if(same.length<3)same=P.sents.filter(function(o){return o!==b&&o._c===b._c});
+        var cand=[];shuffle(same.slice()).slice(0,6).forEach(function(o){parseSent(variantOf(o)).full.split(' ').forEach(function(t){if(t.replace(/[^A-Za-z]/g,'').length>1)cand.push(t)})});
+        shuffle(cand).forEach(put);
+        return out;
     }
     function itemPuzzle(ctx,s){
         var x=ctx.it.x,ps=parseSent(x),tokens=ps.full.split(' ');
         // точка в конце и заглавная первая буква подсказывают ответ — убираем их из плиток
         var endP='',lastT=tokens[tokens.length-1],pm=/[.!?]+$/.exec(lastT);
         if(pm&&lastT.length>pm[0].length){endP=pm[0];tokens[tokens.length-1]=lastT.slice(0,-endP.length)}
-        if(lowerOk(tokens[0],P.words))tokens[0]=tokens[0].charAt(0).toLowerCase()+tokens[0].slice(1);
+        if(lowerOk(tokens[0]))tokens[0]=tokens[0].charAt(0).toLowerCase()+tokens[0].slice(1);
+        var need=tokens.length;tokens=tokens.concat(puzzleExtras(x,ps,tokens));  // tokens[need..] — лишние
         var order=tokens.map(function(_,i){return i});
         function mix(){for(var tries=0;tries<8;tries++){shuffle(order);if(order.some(function(v,i){return v!==i}))break}}
         mix();
         var placed=[],caret=0,justDragged=false,drag=null;
-        ctx.body.append(h('div',{class:'prompt'},h('span',{class:'lang'},'Собери предложение'),h('span',{class:'word',style:'font-size:clamp(1.2rem,5.5vw,1.7rem)'},x.ru||'')));
+        ctx.body.append(h('div',{class:'prompt'},h('span',{class:'lang'},tokens.length>need?'Собери предложение · есть лишние слова':'Собери предложение'),h('span',{class:'word',style:'font-size:clamp(1.2rem,5.5vw,1.7rem)'},x.ru||'')));
         var ans=h('div',{class:'pans',tabindex:'0',role:'group','aria-label':'Ответ. Стрелки двигают курсор, Backspace убирает слово'});
         var bank=h('div',{class:'pbank'}),res=h('div');
         var checkBtn=h('button',{class:'btn primary wide',disabled:true,onclick:check},'Проверить');
@@ -747,7 +792,7 @@
                     onclick:function(){if(justDragged)return;insert(ti,caret)}},tokens[ti]);
                 if(!used&&s.state==='q')b.addEventListener('pointerdown',function(e){startDrag(e,'bank',ti,-1)});
                 bank.append(b)});
-            checkBtn.disabled=s.state!=='q'||placed.length!==tokens.length;
+            checkBtn.disabled=s.state!=='q'||!placed.length;
         }
         function ansTile(ti,pos,preview){
             var b=h('button',{class:'ptile',disabled:s.state!=='q','aria-label':'Убрать «'+tokens[ti]+'»',onclick:function(){
@@ -778,7 +823,7 @@
             else if(e.key==='Home'){caret=0}else if(e.key==='End'){caret=placed.length}
             else if(e.key==='Backspace'&&caret>0){placed.splice(caret-1,1);caret--}
             else if(e.key==='Delete'&&caret<placed.length){placed.splice(caret,1)}
-            else if(e.key==='Enter'&&placed.length===tokens.length){e.preventDefault();check();return}
+            else if(e.key==='Enter'&&placed.length){e.preventDefault();check();return}
             else return;
             e.preventDefault();draw();ans.focus({preventScroll:true});
         });
@@ -825,11 +870,13 @@
             draw();
         }
         function check(){
-            if(s.state!=='q'||placed.length!==tokens.length)return;
+            if(s.state!=='q'||!placed.length)return;
             var got=placed.map(function(i){return tokens[i]}).join(' ');
             var ok=norm(got)===norm(ps.full);
+            var extra=tokens.slice(need);
             s.state='a';ctx.record(ok);ans.classList.add(ok?'ok':'no');draw();bank.hidden=true;
-            res.append(ok?h('div',{class:'result ok'},'Верно!'):h('div',{class:'result no'},'Почти. Правильно так:',h('span',{class:'big'},ps.full)));
+            res.append(ok?h('div',{class:'result ok'},'Верно!'):h('div',{class:'result no'},'Почти. Правильно так:',h('span',{class:'big'},ps.full),
+                extra.length?h('span',null,'Лишние слова: '+extra.join(', ')):null));
             ctx.reveal();acts.className='acts one';acts.replaceChildren(nextBtn(ctx));focusNext();
         }
         draw();ctx.body.append(ans,res,bank,acts,ctx.after);
@@ -1021,7 +1068,7 @@
     function applyDraft(){
         var d=ed.draft;COURSES=d.courses.map(normCourse);DATA={};
         COURSES.forEach(function(c){DATA[c.id]=tagData(c.id,normData(clone(d.data[c.id]||emptyData())));LOADED[c.id]=courseJson(DATA[c.id])});
-        LOADED_COURSES=coursesJson(COURSES);ed.draft=null;clearDraft();
+        LOADED_COURSES=coursesJson(COURSES);ed.draft=null;clearDraft();lowerSet=null;
     }
     function parseInput(text,defTopic){
         var words=[],sents=[],bad=[],topic=defTopic;
@@ -1029,6 +1076,8 @@
             var line=raw.trim();if(!line)return;
             if(line.charAt(0)==='#'){topic=line.replace(/^#+\s*/,'').trim()||defTopic;return}
             line=line.replace(/^\d+[.)]\s+/,'');
+            var say='',ti=line.search(/\s~\s*/);  // «… ~ айл би райт БЭК» — как звучит
+            if(ti>0){say=line.slice(ti).replace(/^\s*~\s*/,'').trim();line=line.slice(0,ti).trim()}
             var parts=line.split(/\s*(?:\t|\s[—–-]\s|\s=\s)\s*/).filter(Boolean);
             if(parts.length<2&&!/\[[^\]]+\]/.test(line)){
                 parts=line.split(/\s*(?:[—–]|=|;)\s*/).filter(Boolean);
@@ -1036,8 +1085,8 @@
             }
             var en=parts[0],ru=parts.slice(1).join(', ');
             if(/[а-яё]/i.test(en)&&ru&&!/[а-яё]/i.test(ru)){var t=en;en=ru;ru=t}
-            if(/\[[^\]]+\]/.test(en)||/[.!?]$/.test(en)) sents.push({s:en,ru:ru||'',topic:topic});
-            else if(ru) words.push({en:en,ru:ru,topic:topic});
+            if(/\[[^\]]+\]/.test(en)||/[.!?]$/.test(en)) sents.push({s:en,ru:ru||'',topic:topic,say:say});
+            else if(ru) words.push({en:en,ru:ru,topic:topic,say:say});
             else bad.push(line);
         });
         return {words:words,sents:sents,bad:bad};
@@ -1062,13 +1111,13 @@
         // courses
         var chips=h('div',{class:'chips'},d.courses.map(function(c){
                 return h('button',{class:'chip','aria-pressed':String(c.id===ed.cid),onclick:function(){ed.cid=c.id;ed.courseForm=null;ed.confirmTopic=null;render()}},c.title)}),
-            h('button',{class:'chip add',onclick:function(){ed.courseForm={isNew:true,title:'',links:['cambridge'],dict:'essential'};render()}},'+ Курс'));
+            h('button',{class:'chip add',onclick:function(){ed.courseForm={isNew:true,title:'',links:['cambridge'],dict:'essential',accent:''};render()}},'+ Курс'));
         var cur=d.courses.filter(function(c){return c.id===ed.cid})[0];
         var courseSec=h('section',{class:'sec'},h('div',{class:'label'},'Курс'),chips);
         if(ed.courseForm) courseSec.append(courseFormEl());
         else if(cur) courseSec.append(h('div',{style:'display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap'},
             h('span',{class:'hint'},'Файл: '+cur.file+' · ссылки: '+(cur.links.length?cur.links.map(function(l){return l==='youglish'?'YouGlish':'Cambridge'}).join(', '):'нет')+' · словарь: '+(cur.dict==='full'?'полный':'простой')),
-            h('button',{class:'btn small ghost',onclick:function(){ed.courseForm={isNew:false,title:cur.title,links:cur.links.slice(),dict:cur.dict};render()}},'Настроить')));
+            h('button',{class:'btn small ghost',onclick:function(){ed.courseForm={isNew:false,title:cur.title,links:cur.links.slice(),dict:cur.dict,accent:cur.accent||''};render()}},'Настроить')));
         out.push(courseSec);
         if(!cur){out.push(h('p',{class:'hint'},'Создайте первый курс.'));return out}
         var cd=dD(cur.id);
@@ -1078,7 +1127,7 @@
         var dl=h('datalist',{id:'topic-list'},topics.map(function(t){return h('option',{value:t})}));
         var tIn=h('input',{id:'add-topic',class:'field',list:'topic-list',placeholder:'Тема, например Unit 3 · Food',autocomplete:'off',value:ed.lastTopic||'','aria-label':'Тема'});
         var ta=h('textarea',{id:'add-words',class:'field',placeholder:'apple — яблоко\nto be hungry — быть голодным\n[She/Her/He] is my sister. — Она моя сестра.\nThis is my bag. — Это моя сумка.','aria-label':'Слова и предложения'});
-        var HINT='Слово: «apple — яблоко». Предложение с пропуском: слово в [скобках], варианты через «/». Предложение с точкой в конце без скобок станет пазлом. Строка «# Тема» меняет тему для строк ниже. Варианты в фигурных скобках — {sister|mum} и в переводе {сестра|мама} — каждый раз подставляются по-разному, чтобы фразу не заучивали наизусть.';
+        var HINT='Слово: «apple — яблоко». Звучание — после ~ : «I\'ll be right back — я сейчас вернусь ~ айл би райт БЭК». Предложение с пропуском: слово в [скобках], варианты через «/». Предложение с точкой в конце без скобок станет пазлом. Строка «# Тема» меняет тему для строк ниже. Варианты в фигурных скобках — {sister|mum} и в переводе {сестра|мама} — каждый раз подставляются по-разному, чтобы фразу не заучивали наизусть. Нулевой артикль в скобках — «-»: «I like [-/the] music.»';
         var info=h('div',{class:'hint'},HINT);
         var addBtn=h('button',{class:'btn primary',disabled:true,onclick:doAdd},'Добавить');
         ta.addEventListener('input',function(){var r=parseInput(ta.value,tIn.value.trim()||NOTOPIC),n=r.words.length+r.sents.length;
@@ -1088,8 +1137,8 @@
         function doAdd(){
             var def=tIn.value.trim()||NOTOPIC,r=parseInput(ta.value,def),dup=0,added=0;
             var have={};cd.words.forEach(function(w){have[topicOf(w)+'|'+norm(w.en)]=1});cd.sentences.forEach(function(s){have['s|'+topicOf(s)+'|'+norm(s.s)]=1});
-            r.words.forEach(function(x){var k=x.topic+'|'+norm(x.en);if(have[k]){dup++;return}have[k]=1;cd.words.push({id:uid('w'),en:x.en,ru:x.ru,topic:x.topic});added++});
-            r.sents.forEach(function(x){var k='s|'+x.topic+'|'+norm(x.s);if(have[k]){dup++;return}have[k]=1;var o={id:uid('s'),s:x.s,topic:x.topic};if(x.ru)o.ru=x.ru;cd.sentences.push(o);added++});
+            r.words.forEach(function(x){var k=x.topic+'|'+norm(x.en);if(have[k]){dup++;return}have[k]=1;var o={id:uid('w'),en:x.en,ru:x.ru,topic:x.topic};if(x.say)o.say=x.say;cd.words.push(o);added++});
+            r.sents.forEach(function(x){var k='s|'+x.topic+'|'+norm(x.s);if(have[k]){dup++;return}have[k]=1;var o={id:uid('s'),s:x.s,topic:x.topic};if(x.ru)o.ru=x.ru;if(x.say)o.say=x.say;cd.sentences.push(o);added++});
             ed.lastTopic=tIn.value.trim();changed();render();
             toast('Добавлено: '+added+(dup?' · повторы пропущены: '+dup:'')+'. Не забудьте «Сохранить».');
         }
@@ -1112,8 +1161,10 @@
         tIn.addEventListener('input',function(){f.title=tIn.value});
         function linkChk(id,label){return h('label',{class:'check'},h('input',{type:'checkbox',checked:f.links.indexOf(id)>=0,onchange:function(e){var i=f.links.indexOf(id);if(e.target.checked&&i<0)f.links.push(id);if(!e.target.checked&&i>=0)f.links.splice(i,1)}}),label)}
         var seg=h('div',{class:'seg'},[['essential','Простой'],['full','Полный']].map(function(o){return h('button',{'aria-pressed':String(f.dict===o[0]),onclick:function(){f.dict=o[0];render()}},o[1])}));
+        var accSeg=h('div',{class:'seg'},[['','Как в профиле'],['us','Американское'],['uk','Британское']].map(function(o){return h('button',{'aria-pressed':String((f.accent||'')===o[0]),onclick:function(){f.accent=o[0];render()}},o[1])}));
         return h('div',{class:'panel sec'},
             h('div',{class:'label'},f.isNew?'Новый курс':'Настройки курса'),tIn,
+            h('div',{class:'hint'},'Произношение курса'),accSeg,
             h('div',{class:'hint'},'Кнопки после ответа'),
             linkChk('cambridge','Cambridge — озвучка носителем и примеры'),
             linkChk('youglish','YouGlish — слово в настоящих видео'),
@@ -1126,8 +1177,8 @@
                             var base=title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'course',id=base,n=2;
                             while(d.courses.some(function(c){return c.id===id}))id=base+'-'+(n++);
                             if(id==='course'){id='course-'+(d.courses.length+1);while(d.courses.some(function(c){return c.id===id}))id+='x'}
-                            d.courses.push({id:id,title:title,file:'words/'+id+'.json',links:f.links.slice(),dict:f.dict});d.data[id]=emptyData();ed.cid=id;
-                        }else{var c=d.courses.filter(function(c){return c.id===ed.cid})[0];if(c){c.title=title;c.links=f.links.slice();c.dict=f.dict}}
+                            var nc={id:id,title:title,file:'words/'+id+'.json',links:f.links.slice(),dict:f.dict};if(f.accent)nc.accent=f.accent;d.courses.push(nc);d.data[id]=emptyData();ed.cid=id;
+                        }else{var c=d.courses.filter(function(c){return c.id===ed.cid})[0];if(c){c.title=title;c.links=f.links.slice();c.dict=f.dict;if(f.accent)c.accent=f.accent;else delete c.accent}}
                         ed.courseForm=null;changed();render();
                     }},f.isNew?'Создать':'Готово')));
     }
@@ -1153,20 +1204,22 @@
             ws.forEach(function(w){
                 if(ed.editing===w.id){
                     var e1=h('input',{class:'field',value:w.en,'aria-label':'По-английски',id:'e-en'}),e2=h('input',{class:'field',value:w.ru,'aria-label':'Перевод',id:'e-ru'}),e3=h('input',{class:'field',value:topicOf(w),list:'topic-list','aria-label':'Тема',id:'e-tp'});
-                    g.append(h('div',{class:'wedit'},e1,e2,h('div',{class:'full'},e3,
+                    var e4=h('input',{class:'field',value:w.say||'',placeholder:'Звучит: айл би райт БЭК','aria-label':'Как звучит',id:'e-say'});
+                    g.append(h('div',{class:'wedit'},e1,e2,e4,h('div',{class:'full'},e3,
                         h('button',{class:'btn small ghost',onclick:function(){ed.editing=null;fillList(list,cd)}},'Отмена'),
-                        h('button',{class:'btn small primary',onclick:function(){var en=e1.value.trim(),ru=e2.value.trim();if(!en||!ru)return;w.en=en;w.ru=ru;w.topic=e3.value.trim()||NOTOPIC;delete w.ex;ed.editing=null;changed();render()}},'Готово'))));
-                } else g.append(h('div',{class:'wrow'},h('span',{class:'en'},w.en),h('span',{class:'ru'},w.ru),h('span',{class:'ra'},
+                        h('button',{class:'btn small primary',onclick:function(){var en=e1.value.trim(),ru=e2.value.trim();if(!en||!ru)return;w.en=en;w.ru=ru;w.topic=e3.value.trim()||NOTOPIC;if(e4.value.trim())w.say=e4.value.trim();else delete w.say;delete w.ex;ed.editing=null;changed();render()}},'Готово'))));
+                } else g.append(h('div',{class:'wrow'},h('span',{class:'en'},w.en,w.say?h('small',{class:'say-row'},w.say):null),h('span',{class:'ru'},w.ru),h('span',{class:'ra'},
                     h('button',{'aria-label':'Изменить '+w.en,svg:ICON.edit,onclick:function(){ed.editing=w.id;fillList(list,cd);var f=$('#e-en');if(f)f.focus()}}),
                     h('button',{'aria-label':'Удалить '+w.en,svg:ICON.trash,onclick:function(){cd.words=cd.words.filter(function(x){return x.id!==w.id});changed();render()}}))));
             });
             ss.forEach(function(s){
                 if(ed.editing===s.id){
                     var e1=h('input',{class:'field',value:s.s,'aria-label':'Предложение',id:'e-en'}),e2=h('input',{class:'field',value:s.ru||'','aria-label':'Перевод',id:'e-ru'});
-                    g.append(h('div',{class:'wedit'},e1,e2,h('div',{class:'full'},
+                    var e4=h('input',{class:'field',value:s.say||'',placeholder:'Звучит (необязательно)','aria-label':'Как звучит',id:'e-say'});
+                    g.append(h('div',{class:'wedit'},e1,e2,e4,h('div',{class:'full'},
                         h('button',{class:'btn small ghost',onclick:function(){ed.editing=null;fillList(list,cd)}},'Отмена'),
-                        h('button',{class:'btn small primary',onclick:function(){var v=e1.value.trim();if(!v)return;s.s=v;if(e2.value.trim())s.ru=e2.value.trim();else delete s.ru;delete s.ex;ed.editing=null;changed();render()}},'Готово'))));
-                } else g.append(h('div',{class:'srow'},h('span',{class:'s'},gapMark(s.s)),h('span',{class:'r'},s.ru||'без перевода — только пропуск'),h('span',{class:'ra'},
+                        h('button',{class:'btn small primary',onclick:function(){var v=e1.value.trim();if(!v)return;s.s=v;if(e2.value.trim())s.ru=e2.value.trim();else delete s.ru;if(e4.value.trim())s.say=e4.value.trim();else delete s.say;delete s.ex;ed.editing=null;changed();render()}},'Готово'))));
+                } else g.append(h('div',{class:'srow'},h('span',{class:'s'},gapMark(s.s)),h('span',{class:'r'},s.ru||'без перевода — только пропуск',s.say?h('small',{class:'say-row'},s.say):null),h('span',{class:'ra'},
                     h('button',{'aria-label':'Изменить предложение',svg:ICON.edit,onclick:function(){ed.editing=s.id;fillList(list,cd);var f=$('#e-en');if(f)f.focus()}}),
                     h('button',{'aria-label':'Удалить предложение',svg:ICON.trash,onclick:function(){cd.sentences=cd.sentences.filter(function(x){return x.id!==s.id});changed();render()}}))));
             });

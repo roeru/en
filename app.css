@@ -333,3 +333,9 @@ textarea.field{min-height:150px;resize:vertical;font-family:ui-monospace,SFMono-
     .pbtn{min-height:52px;font-size:.98rem;padding:6px 8px}
     .acts .btn{min-height:52px}
 }
+/* ---- v4: как звучит (русскими буквами) ---- */
+.say{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;gap:4px 8px;max-width:100%;padding:6px 12px;border-radius:var(--r);background:var(--accent-soft);color:var(--fg);font-weight:700;line-height:1.35;overflow-wrap:anywhere;text-align:center}
+.say-k{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+#after>.say{align-self:center;margin-inline:auto}
+.face .say{font-size:clamp(.9rem,3.8vw,1.05rem)}
+.say-row{display:block;margin-top:2px;color:var(--muted);font-weight:600;font-size:.85rem;overflow-wrap:anywhere}
